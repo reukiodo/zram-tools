@@ -49,8 +49,8 @@ function start {
     if [ ! -d "/sys/class/zram-control" ]; then
         modprobe zram || elog "inserting the zram kernel module"
         SWAP_DEV='zram0'
-    elif [ -b "$( lsblk --noheadings -o name,mountpoints /dev/zram* | awk '$2 == "[SWAP]" {print $1}' )" ]; then
-        SWAP_DEV="$( lsblk --noheadings -o name,mountpoints /dev/zram* | awk '$2 == "[SWAP]" {print $1}' )"
+    elif [ -b "$( lsblk -o name,mountpoint | grep zram | awk '$2 == "[SWAP]" {print $1}' )" ]; then
+        SWAP_DEV="$( lsblk -o name,mountpoint | grep zram | awk '$2 == "[SWAP]" {print $1}' )"
     else
         SWAP_DEV="zram$( cat /sys/class/zram-control/hot_add )"
     fi
@@ -64,7 +64,7 @@ function start {
 
 function status {
     test -x "$( which zramctl )" || elog "install zramctl for this feature"
-    SWAP_DEV="/dev/$( lsblk -o name,mountpoints | awk '$2 == "[SWAP]" {print $1}' )"
+    SWAP_DEV="/dev/$( lsblk -o name,mountpoint | grep zram | awk '$2 == "[SWAP]" {print $1}' )"
     test -b "${SWAP_DEV}" || elog "${SWAP_DEV} doesn't exist"
     # old zramctl doesn't have --output-all
     #zramctl --output-all
@@ -73,7 +73,7 @@ function status {
 
 function stop {
     wlog "Stopping Zram"
-    SWAP_DEV="/dev/$( lsblk -o name,mountpoints | awk '$2 == "[SWAP]" {print $1}' )"
+    SWAP_DEV="/dev/$( lsblk -o name,mountpoint | grep zram | awk '$2 == "[SWAP]" {print $1}' )"
     test -b "${SWAP_DEV}" || wlog "${SWAP_DEV} doesn't exist"
     swapoff "${SWAP_DEV}" 2>/dev/null || wlog "disabling swap device: ${SWAP_DEV}"
     echo -n ${SWAP_DEV} | grep -o -E '[0-9]+' > /sys/class/zram-control/hot_remove
