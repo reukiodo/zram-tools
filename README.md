@@ -1,3 +1,5 @@
+UPDATE: [github zram-config](https://github.com/ecdye/zram-config) provides managing swap and multiple directories
+
 zram-tools
 ==========
 
@@ -6,7 +8,7 @@ Scripts for managing zram device, currently only for zramswap.
 zramswap start
 --------------
 
-Sets up zram device and initializes swap.
+Sets up dynamic zram device and initializes swap.
 
 zramswap stop
 -------------
