@@ -1,7 +1,6 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # This script does the following:
-
 # zramswap start:
 #  Space is assigned to the zram device, then swap is initialized and enabled.
 # zramswap stop:
@@ -10,7 +9,6 @@
 # https://github.com/torvalds/linux/blob/master/Documentation/blockdev/zram.txt
 
 readonly CONFIG="/etc/default/zramswap"
-readonly SWAP_DEV="/dev/zram0"
 
 if command -v logger >/dev/null; then
     function elog {
@@ -50,15 +48,25 @@ function start {
         readonly SIZE="$((TOTAL_MEMORY * 1024 * PERCENT / 100))"
     fi
 
-    modprobe zram || elog "inserting the zram kernel module"
-    echo -n "${ALGO}" > /sys/block/zram0/comp_algorithm || elog "setting compression algo to ${ALGO}"
-    echo -n "${SIZE}" > /sys/block/zram0/disksize || elog "setting zram device size to ${SIZE}"
-    mkswap "${SWAP_DEV}" || elog "initialising swap device"
-    swapon -p "${PRIORITY}" "${SWAP_DEV}" || elog "enabling swap device"
+    # Check Zram Class created
+    if [ ! -d "/sys/class/zram-control" ]; then
+        modprobe zram || elog "inserting the zram kernel module"
+        SWAP_DEV='zram0'
+    elif [ -b "$(lsblk --noheadings -o name,mountpoints /dev/zram*|awk '$2 == "[SWAP]" {print $1}')" ]; then
+        SWAP_DEV="$(lsblk --noheadings -o name,mountpoints /dev/zram*|awk '$2 == "[SWAP]" {print $1}')"
+    else
+        SWAP_DEV="zram$(cat /sys/class/zram-control/hot_add)"
+    fi
+    #modprobe zram || elog "inserting the zram kernel module"
+    echo -n "${ALGO}" > /sys/block/${SWAP_DEV}/comp_algorithm || elog "setting compression algo to ${ALGO}"
+    echo -n "${SIZE}" > /sys/block/${SWAP_DEV}/disksize || elog "setting zram device size to ${SIZE}"
+    mkswap "/dev/${SWAP_DEV}" || elog "initialising swap device"
+    swapon -p "${PRIORITY}" "/dev/${SWAP_DEV}" || elog "enabling swap device"
 }
 
 function status {
     test -x "$(which zramctl)" || elog "install zramctl for this feature"
+    SWAP_DEV="/dev/$(lsblk -o name,mountpoints|awk '$2 == "[SWAP]" {print $1}')"
     test -b "${SWAP_DEV}" || elog "${SWAP_DEV} doesn't exist"
     # old zramctl doesn't have --output-all
     #zramctl --output-all
@@ -67,9 +75,10 @@ function status {
 
 function stop {
     wlog "Stopping Zram"
+    SWAP_DEV="/dev/$(lsblk -o name,mountpoints|awk '$2 == "[SWAP]" {print $1}')"
     test -b "${SWAP_DEV}" || wlog "${SWAP_DEV} doesn't exist"
     swapoff "${SWAP_DEV}" 2>/dev/null || wlog "disabling swap device: ${SWAP_DEV}"
-    modprobe -r zram || elog "removing zram module from kernel"
+    echo ${SWAP_DEV} | grep -o -E '[0-9]+' > /sys/class/zram-control/hot_remove
 }
 
 function usage {
