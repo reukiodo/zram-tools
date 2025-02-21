@@ -37,12 +37,12 @@ function start {
 
     # Set defaults if not specified
     : "${ALGO:=lzo}" "${SIZE:=256}" "${PRIORITY:=32767}"
-    SIZE=$( (SIZE * 1024 * 1024) ) # convert amount from MiB to bytes
+    SIZE=$(( SIZE * 1024 * 1024 )) # convert amount from MiB to bytes
 
     # Prefer percent if it is set
     if [ -n "${PERCENT}" ]; then
         readonly TOTAL_MEMORY=$( awk '/MemTotal/{print $2}' /proc/meminfo ) # in KiB
-        readonly SIZE="$( (TOTAL_MEMORY * 1024 * PERCENT / 100) )"
+        readonly SIZE="$(( TOTAL_MEMORY * 1024 * PERCENT / 100 ))"
     fi
 
     # Check zram device class created
