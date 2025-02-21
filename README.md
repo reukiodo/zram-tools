@@ -1,4 +1,4 @@
-UPDATE: [github zram-config](https://github.com/ecdye/zram-config) provides managing swap and multiple directories
+UPDATE: [zram-config](https://github.com/ecdye/zram-config) provides managing swap and multiple directories
 
 zram-tools
 ==========
